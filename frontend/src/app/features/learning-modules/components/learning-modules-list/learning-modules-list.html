@@ -1,0 +1,28 @@
+<div class="container">
+  <h1>Learning Modules</h1>
+
+  <div *ngIf="stats()" class="stats">
+    <p>Total Modules: {{ totalCount() }}</p>
+    <p>Completed: {{ completedCount() }}</p>
+    <p>Progress: {{ completionPercentage() }}%</p>
+  </div>
+
+  <div *ngIf="loading()" class="loading">Loading modules...</div>
+  <div *ngIf="error()" class="error">{{ error() }}</div>
+
+  <ul *ngIf="!loading() && modules().length > 0" class="modules-list">
+    <li
+      *ngFor="let module of modules()"
+      [class.completed]="module.completed"
+    >
+      <div>
+        <h3>{{ module.title }}</h3>
+        <p>Category: {{ module.category }}</p>
+        <p>Estimated time: {{ module.estimatedMinutes }} minutes</p>
+      </div>
+      <button (click)="toggleCompleted(module)">
+        {{ module.completed ? 'Mark Incomplete' : 'Mark Complete' }}
+      </button>
+    </li>
+  </ul>
+</div>
