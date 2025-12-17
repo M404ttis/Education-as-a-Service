@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { LearningModule, ModuleStats } from '../../../shared/src';
+import { LearningModule, ModuleStats, UpdateModuleDto } from '../../../shared/src';
 import { ModulesRepository } from './modules.repository';
-
-// NOTE: Service (Business Logic Layer)
 
 @Injectable()
 export class ModulesService {
@@ -47,32 +45,27 @@ export class ModulesService {
     return this.repository.update(id, updatedModule);
   }
 
-  calculateTotalModules(modules: LearningModule[]): number {
-    return modules.length;
-  }
-
-  calculateCompletedCount(modules: LearningModule[]): number {
-    return modules.filter((m) => m.completed).length;
-  }
-
-  calculateCompletionPercentage(
-    completed: number,
-    total: number,
-  ): number {
+  // Calculate completion percentage from all modules
+  getCompletionPercentage(): number {
+    const modules = this.repository.findAll();
+    const total = modules.length;
     if (total === 0) return 0;
+    const completed = modules.filter((m) => m.completed).length;
     return Math.round((completed / total) * 100);
   }
 
+  // Get all statistics in one call
   getStatistics(): ModuleStats {
     const modules = this.repository.findAll();
-    const total = this.calculateTotalModules(modules);
-    const completed = this.calculateCompletedCount(modules);
-    const percentage = this.calculateCompletionPercentage(completed, total);
+    const total = modules.length;
+    const completed = modules.filter((m) => m.completed).length;
+    const completionPercentage =
+      total === 0 ? 0 : Math.round((completed / total) * 100);
 
     return {
       totalModules: total,
       completedModules: completed,
-      completionPercentage: percentage,
+      completionPercentage,
     };
   }
 }

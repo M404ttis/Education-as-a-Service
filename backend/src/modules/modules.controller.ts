@@ -9,8 +9,6 @@ import {
 import { ModulesService } from './modules.service';
 import type { LearningModule, UpdateModuleDto } from '../../../shared/src';
 
-// NOTE: Service (HTTP Layer)
-
 @Controller('api/modules')
 export class ModulesController {
   constructor(private readonly modulesService: ModulesService) { }
