@@ -4,27 +4,30 @@ import {
   Patch,
   Param,
   Body,
+  Query,
   NotFoundException,
 } from '@nestjs/common';
 import { ModulesService } from './modules.service';
-import type { LearningModule, UpdateModuleDto } from '../../../shared/src';
+import type { UpdateModuleDto } from '../../../shared/src';
+import type { LearningModule } from '../../../shared/src';
 
 @Controller('api/modules')
 export class ModulesController {
   constructor(private readonly modulesService: ModulesService) { }
 
-  // PUT SPECIFIC ROUTES FIRST
+  // GET /api/modules?search=keyword&category=AI
+  @Get()
+  getAllModules(
+    @Query('search') search?: string,
+    @Query('category') category?: string,
+  ): LearningModule[] {
+    return this.modulesService.searchModules(search, category);
+  }
+
   // GET /api/modules/stats
   @Get('stats')
   getStats() {
     return this.modulesService.getStatistics();
-  }
-
-  // THEN PUT DYNAMIC ROUTES
-  // GET /api/modules
-  @Get()
-  getAllModules(): LearningModule[] {
-    return this.modulesService.getAllModules();
   }
 
   // PATCH /api/modules/:id

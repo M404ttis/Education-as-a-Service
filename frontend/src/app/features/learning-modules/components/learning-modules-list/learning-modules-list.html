@@ -1,28 +1,68 @@
 <div class="container">
   <h1>Learning Modules</h1>
 
-  <div *ngIf="stats()" class="stats">
-    <p>Total Modules: {{ totalCount() }}</p>
-    <p>Completed: {{ completedCount() }}</p>
-    <p>Progress: {{ completionPercentage() }}%</p>
+  <!-- stats -->
+  <div *ngIf="service.stats()" class="stats">
+      <h2>Progress</h2>
+      <p>Total Modules: {{ service.stats()!.totalModules }}</p>
+      <p>Completed: {{ service.stats()!.completedModules }}</p>
+      <p>Completion: {{ service.stats()!.completionPercentage }}%</p>
+    </div>
+
+  <!-- filter -->
+  <div class="filters">
+    <input
+      [ngModel]="service.searchTerm()"
+      (ngModelChange)="service.setSearchTerm($event)"
+      placeholder="Search modules..."
+      type="text"
+      class="search-input"
+    />
+
+  <select
+    #categorySelect
+    (change)="service.setCategory(categorySelect.value)"
+    class="category-select"
+  >
+    <option value="">All Categories</option>
+    <option value="AI">AI</option>
+    <option value="Sustainability">Sustainability</option>
+    <option value="Digital Skills">Digital Skills</option>
+  </select>
+
   </div>
 
-  <div *ngIf="loading()" class="loading">Loading modules...</div>
-  <div *ngIf="error()" class="error">{{ error() }}</div>
+  <div *ngIf="service.error()" class="error-message">
+    {{ service.error() }}
+  </div>
 
-  <ul *ngIf="!loading() && modules().length > 0" class="modules-list">
-    <li
-      *ngFor="let module of modules()"
-      [class.completed]="module.completed"
-    >
-      <div>
+  <div *ngIf="service.loading()" class="loading-message">
+    Loading modules...
+  </div>
+
+  <div *ngIf="!service.loading() && service.modules().length === 0" class="empty-message">
+    No modules found.
+  </div>
+
+  <!-- learning-modules -->
+  <ul class="modules-list" *ngIf="!service.loading() && service.modules().length > 0">
+    <li *ngFor="let module of service.modules()" class="module-item">
+      <div class="module-info">
         <h3>{{ module.title }}</h3>
-        <p>Category: {{ module.category }}</p>
-        <p>Estimated time: {{ module.estimatedMinutes }} minutes</p>
+        <p class="module-meta">
+          <span class="category">{{ module.category }}</span>
+          <span class="duration">{{ module.estimatedMinutes }} min</span>
+        </p>
       </div>
-      <button (click)="toggleCompleted(module)">
-        {{ module.completed ? 'Mark Incomplete' : 'Mark Complete' }}
+      <button
+        (click)="service.toggleModuleCompleted(module.id)"
+        [class.completed]="module.completed"
+        class="toggle-btn"
+      >
+        {{ module.completed ? '✓ Completed' : '○ Start' }}
       </button>
     </li>
   </ul>
+
+
 </div>

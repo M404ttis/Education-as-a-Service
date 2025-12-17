@@ -1,73 +1,228 @@
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { signal } from '@angular/core';
-import { LearningModule, ModuleStats, UpdateModuleDto } from '@myapp/learning-module.interface';
+import { Injectable, inject, signal, effect } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { LearningModule, ModuleStats } from '@myapp/learning-module.interface';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class LearningModulesService {
-  private apiUrl = 'http://localhost:3000/api/modules';
+  private http = inject(HttpClient);
+  private restApiUrl = 'http://localhost:3000/api/modules';
+  private graphqlUrl = 'http://localhost:3000/graphql';
 
-  // Public signals - exposed to components
+  // State signals
   modules = signal<LearningModule[]>([]);
   stats = signal<ModuleStats | null>(null);
   loading = signal(false);
+  searchTerm = signal('');
+  selectedCategory = signal('');
   error = signal<string | null>(null);
 
-  constructor(private http: HttpClient) { }
+  constructor() {
+    // Auto-fetch when search or category changes
+    effect(() => {
+      this.searchTerm();
+      this.selectedCategory();
+      this.fetchModules();
+    });
+  }
 
-  // Load all modules from backend
-  loadModules(): void {
+  private fetchModules() {
     this.loading.set(true);
     this.error.set(null);
 
-    this.http.get<LearningModule[]>(this.apiUrl).subscribe({
+    // ===== REST VERSION =====
+    let params = new HttpParams();
+    if (this.searchTerm()?.trim()) {
+      params = params.set('search', this.searchTerm());
+    }
+    if (this.selectedCategory()?.trim()) {
+      params = params.set('category', this.selectedCategory());
+    }
+
+    this.http.get<LearningModule[]>(this.restApiUrl, { params }).subscribe({
       next: (data) => {
         this.modules.set(data);
         this.loading.set(false);
-        this.loadStats(); // Load stats after modules
       },
       error: (err) => {
-        this.error.set('Failed to load learning modules');
+        this.error.set('Failed to load modules');
         this.loading.set(false);
-        console.error(err);
-      },
+      }
     });
-  }
 
-  // Load statistics from backend
-  loadStats(): void {
-    this.http.get<ModuleStats>(`${this.apiUrl}/stats`).subscribe({
-      next: (data) => {
-        this.stats.set(data);
-      },
-      error: (err) => {
-        console.error('Failed to load stats:', err);
-      },
-    });
-  }
-
-  // Update a module (set completed status)
-  updateModule(id: string, completed: boolean): void {
-    const dto: UpdateModuleDto = { completed };
-
-    this.http.patch<LearningModule>(`${this.apiUrl}/${id}`, dto).subscribe({
-      next: (updated) => {
-        // Update the modules signal with the new data
-        const current = this.modules();
-        const index = current.findIndex((m) => m.id === updated.id);
-        if (index > -1) {
-          const newModules = [...current];
-          newModules[index] = updated;
-          this.modules.set(newModules);
+    // ===== GRAPHQL VERSION  =====
+    /*
+    const query = `
+      query GetModules($searchTerm: String, $category: String) {
+        modules(searchTerm: $searchTerm, category: $category) {
+          id
+          title
+          category
+          estimatedMinutes
+          completed
         }
-        this.loadStats(); // Reload stats after update
+      }
+    `;
+
+    this.http.post<any>(this.graphqlUrl, {
+      query,
+      variables: {
+        searchTerm: this.searchTerm()?.trim() || null,
+        category: this.selectedCategory()?.trim() || null
+      }
+    }).subscribe({
+      next: (response) => {
+        if (response.errors) {
+          this.error.set(response.errors[0].message);
+          this.loading.set(false);
+          return;
+        }
+        this.modules.set(response.data.modules);
+        this.loading.set(false);
       },
       error: (err) => {
-        this.error.set('Failed to update learning module');
-        console.error(err);
-      },
+        this.error.set('Failed to load modules');
+        this.loading.set(false);
+      }
     });
+    */
+  }
+
+  loadStatistics() {
+    // ===== REST VERSION =====
+    this.http.get<ModuleStats>(`${this.restApiUrl}/stats`).subscribe({
+      next: (data) => this.stats.set(data),
+      error: (err) => this.error.set('Failed to load statistics')
+    });
+
+    // ===== GRAPHQL VERSION  =====
+    /*
+    const query = `
+      query GetStats {
+        moduleStats {
+          totalModules
+          completedModules
+          completionPercentage
+        }
+      }
+    `;
+
+    this.http.post<any>(this.graphqlUrl, { query }).subscribe({
+      next: (response) => {
+        if (response.errors) {
+          this.error.set(response.errors[0].message);
+          return;
+        }
+        this.stats.set(response.data.moduleStats);
+      },
+      error: (err) => this.error.set('Failed to load statistics')
+    });
+    */
+  }
+
+  updateModuleCompleted(id: string, completed: boolean) {
+    // ===== REST VERSION =====
+    this.http.patch<LearningModule>(
+      `${this.restApiUrl}/${id}`,
+      { completed }
+    ).subscribe({
+      next: (updated) => {
+        this.modules.update(modules =>
+          modules.map(m => m.id === id ? updated : m)
+        );
+        // Refresh stats after update
+        this.loadStatistics();
+      },
+
+      error: (err) => this.error.set('Failed to update module')
+    });
+
+    // ===== GRAPHQL VERSION  =====
+    /*
+    const mutation = `
+      mutation UpdateModule($id: String!, $completed: Boolean!) {
+        updateModuleCompleted(id: $id, completed: $completed) {
+          id
+          title
+          category
+          estimatedMinutes
+          completed
+        }
+      }
+    `;
+
+    this.http.post<any>(this.graphqlUrl, {
+      query: mutation,
+      variables: { id, completed }
+    }).subscribe({
+      next: (response) => {
+        if (response.errors) {
+          this.error.set(response.errors[0].message);
+          return;
+        }
+        const updated = response.data.updateModuleCompleted;
+        this.modules.update(modules =>
+          modules.map(m => m.id === id ? updated : m)
+        );
+      },
+      error: (err) => this.error.set('Failed to update module')
+    });
+    */
+  }
+
+  toggleModuleCompleted(id: string) {
+    // ===== REST VERSION =====
+    this.http.patch<LearningModule>(
+      `${this.restApiUrl}/${id}`,
+      {}
+    ).subscribe({
+      next: (updated) => {
+        this.modules.update(modules =>
+          modules.map(m => m.id === id ? updated : m)
+        );
+        // Refresh stats after update
+        this.loadStatistics();
+      },
+      error: (err) => this.error.set('Failed to toggle module')
+    });
+
+    // ===== GRAPHQL VERSION  =====
+    /*
+    const mutation = `
+      mutation ToggleModule($id: String!) {
+        toggleModuleCompleted(id: $id) {
+          id
+          title
+          category
+          estimatedMinutes
+          completed
+        }
+      }
+    `;
+
+    this.http.post<any>(this.graphqlUrl, {
+      query: mutation,
+      variables: { id }
+    }).subscribe({
+      next: (response) => {
+        if (response.errors) {
+          this.error.set(response.errors[0].message);
+          return;
+        }
+        const updated = response.data.toggleModuleCompleted;
+        this.modules.update(modules =>
+          modules.map(m => m.id === id ? updated : m)
+        );
+      },
+      error: (err) => this.error.set('Failed to toggle module')
+    });
+    */
+  }
+
+  setSearchTerm(term: string) {
+    this.searchTerm.set(term);
+  }
+
+  setCategory(category: string) {
+    this.selectedCategory.set(category);
   }
 }

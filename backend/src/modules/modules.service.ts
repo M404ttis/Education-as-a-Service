@@ -14,6 +14,30 @@ export class ModulesService {
     return this.repository.findById(id);
   }
 
+  // Search and filter modules
+  searchModules(searchTerm?: string, category?: string): LearningModule[] {
+    let modules = this.repository.findAll();
+
+    // Filter by search term (title or category)
+    if (searchTerm && searchTerm.trim() !== '') {
+      const term = searchTerm.toLowerCase();
+      modules = modules.filter(
+        (m) =>
+          m.title.toLowerCase().includes(term) ||
+          m.category.toLowerCase().includes(term),
+      );
+    }
+
+    // Filter by category
+    if (category && category.trim() !== '') {
+      modules = modules.filter(
+        (m) => m.category.toLowerCase() === category.toLowerCase(),
+      );
+    }
+
+    return modules;
+  }
+
   updateModuleCompleted(
     id: string,
     completed: boolean,
@@ -45,7 +69,6 @@ export class ModulesService {
     return this.repository.update(id, updatedModule);
   }
 
-  // Calculate completion percentage from all modules
   getCompletionPercentage(): number {
     const modules = this.repository.findAll();
     const total = modules.length;
@@ -54,7 +77,6 @@ export class ModulesService {
     return Math.round((completed / total) * 100);
   }
 
-  // Get all statistics in one call
   getStatistics(): ModuleStats {
     const modules = this.repository.findAll();
     const total = modules.length;

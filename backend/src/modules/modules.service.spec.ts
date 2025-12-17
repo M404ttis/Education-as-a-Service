@@ -227,4 +227,45 @@ describe('ModulesService (Business Logic)', () => {
       expect(result.completionPercentage).toBe(100);
     });
   });
+
+  // graphQl tests 
+  describe('searchModules', () => {
+    it('should return all modules when no search term provided', () => {
+      const result = service.searchModules();
+
+      expect(result.length).toBe(3);
+    });
+
+    it('should filter modules by title', () => {
+      const result = service.searchModules('Machine');
+
+      expect(result.length).toBe(1);
+      expect(result[0].title).toBe('Machine Learning Basics');
+    });
+
+    it('should filter modules by category', () => {
+      const result = service.searchModules('AI');
+
+      expect(result.length).toBe(1);
+      expect(result[0].category).toBe('AI');
+    });
+
+    it('should be case insensitive', () => {
+      const result = service.searchModules('machine');
+
+      expect(result.length).toBe(1);
+    });
+
+    it('should return empty array if no matches', () => {
+      const result = service.searchModules('NonExistent');
+
+      expect(result.length).toBe(0);
+    });
+
+    it('should ignore whitespace', () => {
+      const result = service.searchModules('   ');
+
+      expect(result.length).toBe(3);
+    });
+  });
 });
