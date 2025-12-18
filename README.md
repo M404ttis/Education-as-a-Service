@@ -462,20 +462,6 @@ Can add Docker setup for containerized deployment.
 
 ---
 
-## Interview Talking Points
-
-This project demonstrates:
-
-✅ **Full-stack TypeScript** - Shared types across frontend/backend
-✅ **Modern Angular** - Signals-based reactive state (16+)
-✅ **NestJS Architecture** - Modular, dependency injection, separation of concerns
-✅ **API Design** - REST + GraphQL implementations side-by-side
-✅ **Best Practices** - Service abstraction, unit tests, clean code
-✅ **Monorepo** - Shared types, multiple packages
-✅ **Testing** - Jest unit tests with 24 passing tests
-✅ **Architectural Thinking** - 3-tier backend, when to use GraphQL vs REST
-
----
 
 ## Learning Resources
 
