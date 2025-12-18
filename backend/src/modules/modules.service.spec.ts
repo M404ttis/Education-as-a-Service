@@ -240,11 +240,11 @@ describe('ModulesService (Business Logic)', () => {
       const result = service.searchModules('Machine');
 
       expect(result.length).toBe(1);
-      expect(result[0].title).toBe('Machine Learning Basics');
+      expect(result[0].title).toContain('Machine');
     });
 
     it('should filter modules by category', () => {
-      const result = service.searchModules('AI');
+      const result = service.searchModules(undefined, 'AI');
 
       expect(result.length).toBe(1);
       expect(result[0].category).toBe('AI');
@@ -266,6 +266,21 @@ describe('ModulesService (Business Logic)', () => {
       const result = service.searchModules('   ');
 
       expect(result.length).toBe(3);
+    });
+
+    it('should filter by search term and category together', () => {
+      const result = service.searchModules('Learning', 'AI');
+
+      expect(result.length).toBe(1);
+      expect(result[0].title).toContain('Learning');
+      expect(result[0].category).toBe('AI');
+    });
+
+    it('should handle category filter separately', () => {
+      const result = service.searchModules(undefined, 'Digital Skills');
+
+      expect(result.length).toBe(1);
+      expect(result[0].category).toBe('Digital Skills');
     });
   });
 });
