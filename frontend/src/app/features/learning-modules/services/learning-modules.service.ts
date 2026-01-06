@@ -1,6 +1,7 @@
 import { Injectable, inject, signal, effect } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { LearningModule, ModuleStats } from '@myapp/learning-module.interface';
+import { tap, catchError, throwError } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class LearningModulesService {
@@ -38,53 +39,54 @@ export class LearningModulesService {
       params = params.set('category', this.selectedCategory());
     }
 
-    this.http.get<LearningModule[]>(this.restApiUrl, { params }).subscribe({
-      next: (data) => {
+    this.http.get<LearningModule[]>(this.restApiUrl, { params }).pipe(
+      tap((data) => {
         this.modules.set(data);
         this.loading.set(false);
-      },
-      error: (err) => {
+      }),
+      catchError((err) => {
         this.error.set('Failed to load modules');
         this.loading.set(false);
-      }
-    });
+        return throwError(() => err);
+      })
+    ).subscribe();
 
     // ===== GRAPHQL VERSION  =====
-    /*
-    const query = `
-      query GetModules($searchTerm: String, $category: String) {
-        modules(searchTerm: $searchTerm, category: $category) {
-          id
-          title
-          category
-          estimatedMinutes
-          completed
-        }
-      }
-    `;
-
-    this.http.post<any>(this.graphqlUrl, {
-      query,
-      variables: {
-        searchTerm: this.searchTerm()?.trim() || null,
-        category: this.selectedCategory()?.trim() || null
-      }
-    }).subscribe({
-      next: (response) => {
-        if (response.errors) {
-          this.error.set(response.errors[0].message);
-          this.loading.set(false);
-          return;
-        }
-        this.modules.set(response.data.modules);
-        this.loading.set(false);
-      },
-      error: (err) => {
-        this.error.set('Failed to load modules');
-        this.loading.set(false);
-      }
-    });
-    */
+    // /*
+    // const query = `
+    //   query GetModules($searchTerm: String, $category: String) {
+    //     modules(searchTerm: $searchTerm, category: $category) {
+    //       id
+    //       title
+    //       category
+    //       estimatedMinutes
+    //       completed
+    //     }
+    //   }
+    // `;
+    //
+    // this.http.post<any>(this.graphqlUrl, {
+    //   query,
+    //   variables: {
+    //     searchTerm: this.searchTerm()?.trim() || null,
+    //     category: this.selectedCategory()?.trim() || null
+    //   }
+    // }).subscribe({
+    //   next: (response) => {
+    //     if (response.errors) {
+    //       this.error.set(response.errors[0].message);
+    //       this.loading.set(false);
+    //       return;
+    //     }
+    //     this.modules.set(response.data.modules);
+    //     this.loading.set(false);
+    //   },
+    //   error: (err) => {
+    //     this.error.set('Failed to load modules');
+    //     this.loading.set(false);
+    //   }
+    // });
+    // */
   }
 
   loadStatistics() {
@@ -118,23 +120,24 @@ export class LearningModulesService {
     });
     */
   }
-
   updateModuleCompleted(id: string, completed: boolean) {
     // ===== REST VERSION =====
     this.http.patch<LearningModule>(
       `${this.restApiUrl}/${id}`,
       { completed }
-    ).subscribe({
-      next: (updated) => {
+    ).pipe(
+      tap((updated) => {
         this.modules.update(modules =>
           modules.map(m => m.id === id ? updated : m)
         );
         // Refresh stats after update
         this.loadStatistics();
-      },
-
-      error: (err) => this.error.set('Failed to update module')
-    });
+      }),
+      catchError((err) => {
+        this.error.set('Failed to update module');
+        return throwError(() => err);
+      })
+    ).subscribe();
 
     // ===== GRAPHQL VERSION  =====
     /*
